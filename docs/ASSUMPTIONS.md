@@ -1,13 +1,12 @@
 # Assumptions
 
-- Docker Compose is the local runtime; the app is served at `http://localhost:8000`.
+- Local PHP serves the application at `http://localhost:8000`; MySQL and Redis
+  run as local services.
 - MySQL 8.4 is used as a MySQL 8-compatible image. The primary database is
   `billing`; Pest uses a separate `billing_test` database.
-- The MySQL test database is created by the container initialization script and
-  is intentionally not populated with production data.
-- Host-run tests use MySQL port `3307` to avoid conflicting with a local MySQL
-  instance. Container-run tests override this with the Compose service hostname
-  and port.
+- The MySQL test database `billing_test` is created separately and is
+  intentionally not populated with production data.
+- Host-run tests use the local MySQL connection configured in `.env.testing`.
 - Redis is the default cache store and queue backend. Queue workers are started
   explicitly with `php artisan queue:work redis`.
 - API installation uses Laravel Sanctum's generated API scaffolding as the

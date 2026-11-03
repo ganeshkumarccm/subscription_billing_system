@@ -46,23 +46,53 @@ flowchart LR
 
 ### Prerequisites
 
-- Docker Desktop and Docker Compose
-- Composer, PHP 8.3, and Node is not required
+- PHP 8.3 with PDO MySQL
+- Composer
+- MySQL 8
+- Redis 7+
+- Node is not required
 - Optional: k6 for the usage benchmark
 
-Docker Compose is the supported local runtime. The app is available at
-`http://localhost:8000`.
+The application runs directly on localhost at `http://localhost:8000`; no
+Docker, Node build step, or frontend bundler is required.
 
-### Install dependencies
+### Clone and install step by step
+
+1. Clone the repository and enter the project:
+
+```powershell
+git clone --branch Develop https://github.com/ganeshkumarccm/subscription_billing_system.git
+cd subscription_billing_system
+```
+
+2. Apply the exercise-only Composer audit setting before dependency install:
+
+```powershell
+composer config audit.block-insecure false
+```
+
+3. Install PHP dependencies already declared in `composer.json`:
 
 ```powershell
 composer install
-composer config audit.block-insecure false
-php artisan install:api
-composer require php-open-source-saver/jwt-auth
+```
+
+4. Copy the local environment file:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+4. Configure local MySQL and Redis in `.env`. The defaults expect:
+   - MySQL database `billing`, user `billing`, password `billing`, port `3306`
+   - Redis at `127.0.0.1:6379`
+
+5. Generate the application and JWT secrets:
+
+```powershell
+php artisan key:generate
 php artisan vendor:publish --provider="PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider"
 php artisan jwt:secret
-composer require pestphp/pest pestphp/pest-plugin-laravel --dev --with-all-dependencies
 ```
 
 `audit.block-insecure false` is included only for this exercise because
@@ -70,32 +100,41 @@ Composer security advisories can block Laravel 11 dependency resolution. Do
 not disable advisory blocking in production; upgrade or replace affected
 packages instead.
 
-### Start the stack
+### Migrate and seed
+
+1. Create the `billing` and `billing_test` databases and grant the local
+   MySQL user access.
+
+2. Run migrations:
 
 ```powershell
-docker compose up -d --build
-docker compose exec app php artisan key:generate
-docker compose exec app php artisan migrate
-docker compose exec app php artisan db:seed
+php artisan migrate
 ```
 
-The Compose services are:
+3. Seed the demo merchants, plans, customers, subscriptions, and users:
 
-| Service | Purpose |
-|---|---|
-| `app` | PHP-FPM and Artisan commands |
-| `nginx` | HTTP server on port `8000` |
-| `mysql` | MySQL 8.4-compatible database |
-| `redis` | Cache and Redis queue backend |
+```powershell
+php artisan db:seed
+```
 
 The demo seeder creates two merchants, three plans per merchant, 50 customers
 per merchant, subscriptions including mid-cycle starts, and one user per
 merchant. Demo users have password `password`.
 
+The Acme Analytics demo login is:
+
+```text
+Email:    acme.analytics@example.test
+Password: password
+```
+
+Open [http://localhost:8000/login](http://localhost:8000/login) and use these
+credentials to access the dashboard.
+
 For a large usage dataset:
 
 ```powershell
-docker compose exec app php artisan seed:usage --rows=5000000
+php artisan seed:usage --rows=5000000
 ```
 
 This uses raw inserts in chunks of 5,000 and atomic daily aggregate upserts.
@@ -105,13 +144,13 @@ This uses raw inserts in chunks of 5,000 and atomic daily aggregate upserts.
 Run a Redis queue worker in a long-lived terminal:
 
 ```powershell
-docker compose exec app php artisan queue:work redis --queue=default,billing
+php artisan queue:work redis --queue=default,billing
 ```
 
 Run the scheduler locally:
 
 ```powershell
-docker compose exec app php artisan schedule:work
+php artisan schedule:work
 ```
 
 The scheduler dispatches cycle-end invoice batches daily. In production, use
@@ -120,12 +159,10 @@ process supervisor for `schedule:work` and queue workers.
 
 ### Tests
 
-The test database is `billing_test`. Host-run tests use MySQL port `3307`;
-container-run tests use the `mysql` hostname:
+The test database is `billing_test`, configured separately from `billing`:
 
 ```powershell
 php artisan test
-docker compose exec -e DB_HOST=mysql -e DB_PORT=3306 app php artisan test
 ```
 
 ## API reference
@@ -137,13 +174,30 @@ All JSON endpoints use the `/api/v1` prefix and accept
 Authorization: Bearer <jwt>
 ```
 
-### Register and log in
+### Register and log in step by step
+
+#### Option 1: Use the seeded demo account
+
+```powershell
+curl -X POST http://localhost:8000/api/v1/auth/login `
+  -H "Accept: application/json" -H "Content-Type: application/json" `
+  -d "{\"email\":\"acme.analytics@example.test\",\"password\":\"password\"}"
+```
+
+Copy the `access_token` from the response and use it in the authenticated
+requests below.
+
+#### Option 2: Register a new merchant
 
 ```powershell
 curl -X POST http://localhost:8000/api/v1/auth/register `
   -H "Accept: application/json" -H "Content-Type: application/json" `
   -d "{\"merchant_name\":\"Acme\",\"name\":\"Admin\",\"email\":\"admin@acme.test\",\"password\":\"password123\",\"password_confirmation\":\"password123\"}"
+```
 
+Then log in with the new account:
+
+```powershell
 curl -X POST http://localhost:8000/api/v1/auth/login `
   -H "Accept: application/json" -H "Content-Type: application/json" `
   -d "{\"email\":\"admin@acme.test\",\"password\":\"password123\"}"
@@ -285,8 +339,8 @@ short-lived access tokens.
 
 ## Assumptions
 
-- Docker Compose is the local runtime; the app is served at
-  `http://localhost:8000`.
+- Local PHP serves the app at `http://localhost:8000`; MySQL and Redis are
+  local services.
 - MySQL 8.4 is used as a MySQL 8-compatible image. Production data is in
   `billing`; Pest uses a separate `billing_test` database.
 - Redis is the default cache store and queue backend.
@@ -351,9 +405,8 @@ The canonical list is [docs/ASSUMPTIONS.md](docs/ASSUMPTIONS.md).
 ## Useful commands
 
 ```powershell
-docker compose logs -f nginx app
-docker compose exec app php artisan route:list
-docker compose exec app php artisan schedule:list
-docker compose exec app php artisan queue:failed
-docker compose down
+php artisan serve --host=127.0.0.1 --port=8000
+php artisan route:list
+php artisan schedule:list
+php artisan queue:failed
 ```
