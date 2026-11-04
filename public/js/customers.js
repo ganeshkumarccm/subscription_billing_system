@@ -14,16 +14,38 @@
         window.api(`/customers?${params}`).then((response) => {
             const table = document.getElementById('customers-table');
             table.replaceChildren();
-            (response.data || []).forEach((customer) => {
+            const customers = response.data || [];
+            const meta = response.meta || {};
+            document.getElementById('customer-count').textContent = Number(meta.total || customers.length).toLocaleString('en-IN');
+            document.getElementById('customer-page-label').textContent = `${meta.current_page || 1} / ${meta.last_page || 1}`;
+            document.getElementById('customer-search-label').textContent = search.value.trim() || 'All customers';
+            document.getElementById('customer-results-label').textContent =
+                `Showing ${customers.length} of ${Number(meta.total || customers.length).toLocaleString('en-IN')} customers`;
+            customers.forEach((customer) => {
                 const row = document.createElement('tr');
                 const link = document.createElement('a');
                 link.href = `/customers/${encodeURIComponent(customer.id)}`;
                 link.textContent = customer.name || `Customer #${customer.id}`;
-                const name = document.createElement('td'); name.append(link);
-                row.append(name, cell(customer.email));
+                link.className = 'customer-name-link';
+                const avatar = document.createElement('span');
+                avatar.className = 'customer-avatar';
+                avatar.textContent = (customer.name || 'C').charAt(0).toUpperCase();
+                const name = document.createElement('td');
+                name.append(avatar, link);
+                const id = cell(`#${customer.id}`);
+                id.className = 'text-muted small';
                 const action = document.createElement('td');
-                const view = document.createElement('a'); view.href = link.href; view.textContent = 'View'; view.className = 'btn btn-sm btn-outline-primary';
-                action.append(view); row.append(action); table.append(row);
+                action.className = 'text-end';
+                const view = document.createElement('a');
+                view.href = link.href;
+                view.className = 'table-action';
+                view.textContent = 'View ';
+                const arrow = document.createElement('i');
+                arrow.className = 'bi bi-arrow-up-right';
+                view.append(arrow);
+                action.append(view);
+                row.append(name, cell(customer.email), id, action);
+                table.append(row);
             });
             renderPagination(response.meta || {});
             loading.classList.add('d-none'); content.classList.remove('d-none');
