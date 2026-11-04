@@ -29,7 +29,10 @@ class DashboardQueryService
             ->join('customers as c', 'c.id', '=', 's.customer_id')
             ->where('s.merchant_id', $merchant->id)
             ->where('s.status', 'active')
-            ->get(['s.id', 's.customer_id', 's.current_period_start', 's.current_period_end']);
+            ->get([
+                's.id', 's.customer_id', 's.current_period_start', 's.current_period_end',
+                'c.name as customer_name', 'c.email as customer_email',
+            ]);
 
         $customerIds = $subscriptions->pluck('customer_id')->unique()->values();
         $aggregates = $customerIds->isEmpty()
@@ -89,6 +92,8 @@ class DashboardQueryService
             $allowance = max(1, (int) $segments->where('subscription_id', $subscription->id)->sum('included_units'));
             $topCustomers[$subscription->customer_id] = [
                 'customer_id' => $subscription->customer_id,
+                'customer_name' => $subscription->customer_name,
+                'customer_email' => $subscription->customer_email,
                 'usage_units' => $monthUsage,
                 'allowance_units' => $allowance,
                 'allowance_used_percent' => round(($monthUsage / $allowance) * 100, 2),

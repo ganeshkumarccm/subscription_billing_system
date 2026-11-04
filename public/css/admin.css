@@ -463,6 +463,42 @@
     border-color: var(--admin-blue);
 }
 
+.plan-modal {
+    border: 0;
+    border-radius: 16px;
+}
+
+.plan-modal .modal-header {
+    padding: 22px 24px 16px;
+    border-bottom-color: #edf0f5;
+}
+
+.plan-modal .modal-body {
+    padding: 20px 24px;
+}
+
+.plan-modal .modal-footer {
+    padding: 14px 24px 20px;
+    border-top-color: #edf0f5;
+}
+
+.modal-subtitle {
+    color: var(--admin-muted);
+    font-size: .76rem;
+}
+
+.plan-modal .form-label {
+    color: #647084;
+    font-size: .76rem;
+    font-weight: 700;
+}
+
+.plan-modal .form-control,
+.plan-modal .form-select {
+    border-color: #e1e6ef;
+    font-size: .85rem;
+}
+
 .pagination .page-link {
     border-color: #e2e7f0;
     color: #5368e8;

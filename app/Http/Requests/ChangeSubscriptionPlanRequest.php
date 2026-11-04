@@ -9,7 +9,7 @@ class ChangeSubscriptionPlanRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->attributes->has('merchant');
+        return (int) $this->route('merchant') === (int) auth('api')->user()?->merchant_id;
     }
 
     public function rules(): array
@@ -22,6 +22,6 @@ class ChangeSubscriptionPlanRequest extends FormRequest
 
     public function merchant(): Merchant
     {
-        return $this->attributes->get('merchant');
+        return auth('api')->user()->merchant;
     }
 }

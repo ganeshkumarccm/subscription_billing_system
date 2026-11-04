@@ -84,7 +84,8 @@
                 <table class="table align-middle mb-0">
                     <thead>
                         <tr>
-                            <th>Customer</th>
+                            <th>Name</th>
+                            <th>Email</th>
                             <th>Usage</th>
                             <th>Allowance</th>
                             <th style="min-width: 180px">Allowance used</th>
@@ -139,24 +140,42 @@
         table.replaceChildren();
 
         if (!customers.length) {
-            table.innerHTML = '<tr><td colspan="4" class="text-muted">No usage recorded yet.</td></tr>';
+            const row = document.createElement('tr');
+            const empty = document.createElement('td');
+            empty.colSpan = 5;
+            empty.className = 'text-muted';
+            empty.textContent = 'No usage recorded yet.';
+            row.append(empty);
+            table.append(row);
             return;
         }
 
         customers.forEach((customer) => {
             const percent = Math.min(100, Math.max(0, Number(customer.allowance_used_percent) || 0));
             const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>#${customer.customer_id}</td>
-                <td>${customer.usage_units}</td>
-                <td>${customer.allowance_units}</td>
-                <td>
-                    <div class="progress" role="progressbar" aria-valuenow="${percent}"
-                        aria-valuemin="0" aria-valuemax="100">
-                        <div class="progress-bar" style="width: ${percent}%">${percent}%</div>
-                    </div>
-                </td>
-            `;
+            const name = document.createElement('td');
+            name.textContent = customer.customer_name || `Customer #${customer.customer_id}`;
+            const email = document.createElement('td');
+            email.className = 'text-muted';
+            email.textContent = customer.customer_email || '—';
+            const usage = document.createElement('td');
+            usage.textContent = customer.usage_units;
+            const allowance = document.createElement('td');
+            allowance.textContent = customer.allowance_units;
+            const progressCell = document.createElement('td');
+            const progress = document.createElement('div');
+            progress.className = 'progress';
+            progress.setAttribute('role', 'progressbar');
+            progress.setAttribute('aria-valuenow', percent);
+            progress.setAttribute('aria-valuemin', '0');
+            progress.setAttribute('aria-valuemax', '100');
+            const bar = document.createElement('div');
+            bar.className = 'progress-bar';
+            bar.style.width = `${percent}%`;
+            bar.textContent = `${percent}%`;
+            progress.append(bar);
+            progressCell.append(progress);
+            row.append(name, email, usage, allowance, progressCell);
             table.appendChild(row);
         });
     }

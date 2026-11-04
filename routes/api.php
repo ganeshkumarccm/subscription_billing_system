@@ -18,7 +18,11 @@ Route::middleware('jwt.custom')->prefix('v1')->group(function () {
     Route::get('/merchant', [\App\Http\Controllers\MerchantController::class, 'show']);
     Route::post('/merchant/api-key/regenerate', [\App\Http\Controllers\MerchantController::class, 'regenerateApiKey']);
     Route::get('/plans', [\App\Http\Controllers\CatalogController::class, 'plans']);
+    Route::post('/plans', [\App\Http\Controllers\CatalogController::class, 'storePlan']);
+    Route::put('/plans/{id}', [\App\Http\Controllers\CatalogController::class, 'updatePlan']);
     Route::get('/customers', [\App\Http\Controllers\CatalogController::class, 'customers']);
+    Route::post('/customers', [\App\Http\Controllers\CatalogController::class, 'storeCustomer']);
+    Route::put('/customers/{id}', [\App\Http\Controllers\CatalogController::class, 'updateCustomer']);
     Route::get('/customers/{id}', [\App\Http\Controllers\CatalogController::class, 'customer']);
 });
 
@@ -31,7 +35,7 @@ Route::prefix('v1')->middleware(['merchant.api_key', 'throttle:usage'])->group(f
 });
 
 Route::prefix('v1/merchants/{merchant}')
-    ->middleware(['jwt.auth', 'merchant.owner'])
+    ->middleware(['jwt.custom', 'merchant.owner'])
     ->group(function () {
         Route::post('/subscriptions/{id}/change-plan', [\App\Http\Controllers\SubscriptionController::class, 'changePlan']);
     });
