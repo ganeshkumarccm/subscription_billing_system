@@ -5,6 +5,7 @@ use App\Jobs\GenerateInvoiceJob;
 use App\Models\Customer;
 use App\Models\Merchant;
 use App\Models\MerchantApiKey;
+use App\Models\Invoice;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\SubscriptionSegment;
@@ -18,6 +19,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\SubscriptionStopped;
 use Illuminate\Support\Str;
 
 beforeEach(function () {
@@ -163,6 +166,54 @@ it('returns the dashboard for a known seeded dataset', function () {
     $response->assertOk()
         ->assertJsonPath('data.current_cycle.usage_units', 40)
         ->assertJsonPath('data.top_customers.0.customer_id', $fixture['customer']->id);
+});
+
+it('subscribes a customer without an active subscription to an active plan', function () {
+    $fixture = tenantFixture();
+    $fixture['subscription']->update(['status' => 'cancelled']);
+    $token = auth('api')->login($fixture['user']);
+
+    $response = $this->withToken($token)->postJson(
+        '/api/v1/customers/'.$fixture['customer']->id.'/subscriptions',
+        ['plan_id' => $fixture['plan']->id],
+    );
+
+    $response->assertCreated()
+        ->assertJsonPath('data.status', 'active')
+        ->assertJsonPath('data.customer_id', $fixture['customer']->id);
+    expect(Subscription::where('customer_id', $fixture['customer']->id)->where('status', 'active')->count())->toBe(1)
+        ->and(SubscriptionSegment::where('subscription_id', $response->json('data.id'))->where('plan_id', $fixture['plan']->id)->exists())->toBeTrue();
+});
+
+it('stops an active subscription and disables future billing', function () {
+    $fixture = tenantFixture();
+    Mail::fake();
+    $token = auth('api')->login($fixture['user']);
+
+    $response = $this->withToken($token)->postJson(
+        '/api/v1/merchants/'.$fixture['merchant']->id.'/subscriptions/'.$fixture['subscription']->id.'/cancel',
+    );
+
+    $response->assertOk()->assertJsonPath('data.status', 'cancelled');
+    expect($fixture['subscription']->fresh()->status)->toBe('cancelled')
+        ->and($fixture['subscription']->segments()->whereNull('ends_at')->exists())->toBeFalse();
+    Mail::assertSent(SubscriptionStopped::class, fn (SubscriptionStopped $mail): bool => $mail->hasTo($fixture['customer']->email));
+});
+
+it('includes customer email when viewing invoice history', function () {
+    $fixture = tenantFixture();
+    Invoice::factory()->create([
+        'subscription_id' => $fixture['subscription']->id,
+        'period_start' => $fixture['start']->toDateString(),
+        'period_end' => $fixture['start']->copy()->addMonth()->subDay()->toDateString(),
+    ]);
+
+    $response = $this->withToken(auth('api')->login($fixture['user']))
+        ->getJson('/api/v1/customers/'.$fixture['customer']->id);
+
+    $response->assertOk()
+        ->assertJsonPath('data.invoices.0.customer_email', $fixture['customer']->email)
+        ->assertJsonPath('data.invoices.0.customer_name', $fixture['customer']->name);
 });
 
 it('rolls back merchant registration when user creation fails', function () {

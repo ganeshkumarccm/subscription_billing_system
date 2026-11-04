@@ -24,6 +24,7 @@ Route::middleware('jwt.custom')->prefix('v1')->group(function () {
     Route::post('/customers', [\App\Http\Controllers\CatalogController::class, 'storeCustomer']);
     Route::put('/customers/{id}', [\App\Http\Controllers\CatalogController::class, 'updateCustomer']);
     Route::get('/customers/{id}', [\App\Http\Controllers\CatalogController::class, 'customer']);
+    Route::post('/customers/{customer}/subscriptions', [\App\Http\Controllers\SubscriptionController::class, 'store']);
 });
 
 Route::middleware(['jwt.custom', 'merchant.owner'])->prefix('v1/merchants/{merchant}')->group(function () {
@@ -38,6 +39,7 @@ Route::prefix('v1/merchants/{merchant}')
     ->middleware(['jwt.custom', 'merchant.owner'])
     ->group(function () {
         Route::post('/subscriptions/{id}/change-plan', [\App\Http\Controllers\SubscriptionController::class, 'changePlan']);
+        Route::post('/subscriptions/{id}/cancel', [\App\Http\Controllers\SubscriptionController::class, 'cancel']);
     });
 
 Route::get('/user', function (Request $request) {

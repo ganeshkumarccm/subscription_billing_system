@@ -12,6 +12,8 @@ class InvoiceResource extends JsonResource
         return [
             'id' => $this->id,
             'subscription_id' => $this->subscription_id,
+            'customer_name' => $this->subscription?->customer?->name,
+            'customer_email' => $this->subscription?->customer?->email,
             'period_start' => $this->period_start?->toDateString(),
             'period_end' => $this->period_end?->toDateString(),
             'subtotal' => $this->subtotal,

@@ -70,7 +70,11 @@ class CatalogController extends Controller
 
     public function customer(int $id, MerchantContextService $context): CustomerResource
     {
-        $customer = $context->fromUser()->customers()->with(['subscriptions.segments.plan', 'subscriptions.invoices.items'])
+        $customer = $context->fromUser()->customers()->with([
+            'subscriptions.segments.plan',
+            'subscriptions.invoices.items',
+            'subscriptions.customer',
+        ])
             ->findOrFail($id);
         $customer->setAttribute('usage_30_days', $customer->dailyAggregates()
             ->where('usage_date', '>=', now('UTC')->subDays(29)->toDateString())
