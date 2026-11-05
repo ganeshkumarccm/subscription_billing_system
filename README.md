@@ -104,9 +104,9 @@ REDIS_CLIENT=predis
 If `.env` was created before this setting was added, update
 `REDIS_CLIENT=phpredis` to `REDIS_CLIENT=predis`.
 
-6. Configure local MySQL and Redis in `.env`. The defaults expect:
+6. Configure local MySQL in `.env`. The defaults expect:
    - MySQL database `billing`, user `billing`, password `billing`, port `3306`
-   - Redis at `127.0.0.1:6379`
+   - Database-backed cache (no Redis service is required for migrations or seeding)
 
 7. Generate the application and JWT secrets:
 
@@ -121,26 +121,27 @@ Composer security advisories can block Laravel 11 dependency resolution. Do
 not disable advisory blocking in production; upgrade or replace affected
 packages instead.
 
-### Redis troubleshooting
+### Redis and cache configuration
 
-If `php artisan db:seed` reports `Class "Redis" not found`, the application is
-still configured to use the `phpredis` extension or the Predis dependency has
-not been installed. From the project directory, run:
+The local `.env.example` uses the database cache store, so migrations and
+`php artisan db:seed` do not require Redis. The cache migration must be run
+before seeding:
 
 ```powershell
-composer install
 php artisan config:clear
-```
-
-Then verify that `.env` contains `REDIS_CLIENT=predis` and retry:
-
-```powershell
+php artisan migrate
 php artisan db:seed
 ```
 
-Redis must be running and reachable at `REDIS_HOST` and `REDIS_PORT`. On a
-local Windows installation, start the Redis service before running the seeder
-or queue worker.
+Redis remains configured as the queue backend. Start Redis before running a
+queue worker or switch `QUEUE_CONNECTION` to `database` when Redis is not
+available. If an existing `.env` still has `CACHE_STORE=redis`, change it to:
+
+```dotenv
+CACHE_STORE=database
+```
+
+Use `php artisan config:clear` after changing `.env`.
 
 ### Migrate and seed
 
@@ -385,7 +386,8 @@ short-lived access tokens.
   local services.
 - MySQL 8.4 is used as a MySQL 8-compatible image. Production data is in
   `billing`; Pest uses a separate `billing_test` database.
-- Redis is the default cache store and queue backend.
+- The database cache store is the default local cache store; Redis is used by
+  the queue backend when queue workers are enabled.
 - All timestamps are UTC and money values are integer paise.
 - Late usage is accepted only when `occurred_at` falls within the customer's
   current active subscription period; events outside it are rejected.

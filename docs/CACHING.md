@@ -5,7 +5,8 @@
 - Plan lookups by plan ID.
 - The active plan for a subscription at a UTC timestamp.
 
-Entries use the Redis cache store, a 10-minute TTL, and `Cache::remember`. A
+Entries use the configured cache store (database by default locally), a
+10-minute TTL, and `Cache::remember`. A
 per-key `Cache::lock` prevents concurrent requests from loading the same hot
 key at once. The cache uses a version key instead of tags so invalidation also
 works with cache stores used by tests.
