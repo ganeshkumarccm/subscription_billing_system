@@ -7,7 +7,8 @@
 - The MySQL test database `billing_test` is created separately and is
   intentionally not populated with production data.
 - Host-run tests use the local MySQL connection configured in `.env.testing`.
-- Redis is the default cache store and queue backend. Queue workers are started
+- The database cache store is used locally so migrations and seeders do not
+  require a running Redis service. Queue workers use Redis when started
   explicitly with `php artisan queue:work redis`.
 - API installation uses Laravel Sanctum's generated API scaffolding as the
   Laravel 11 baseline. JWT authentication and the usage endpoint's API-key
