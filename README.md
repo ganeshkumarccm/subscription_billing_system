@@ -83,11 +83,28 @@ composer install
 Copy-Item .env.example .env
 ```
 
-4. Configure local MySQL and Redis in `.env`. The defaults expect:
+5. Install the Redis client dependency and refresh the Composer autoloader:
+
+```powershell
+composer install
+composer dump-autoload
+```
+
+This project uses `predis/predis`, so the PHP `redis` extension is not
+required. Keep this setting in `.env`:
+
+```dotenv
+REDIS_CLIENT=predis
+```
+
+If `.env` was created before this setting was added, update
+`REDIS_CLIENT=phpredis` to `REDIS_CLIENT=predis`.
+
+6. Configure local MySQL and Redis in `.env`. The defaults expect:
    - MySQL database `billing`, user `billing`, password `billing`, port `3306`
    - Redis at `127.0.0.1:6379`
 
-5. Generate the application and JWT secrets:
+7. Generate the application and JWT secrets:
 
 ```powershell
 php artisan key:generate
@@ -99,6 +116,27 @@ php artisan jwt:secret
 Composer security advisories can block Laravel 11 dependency resolution. Do
 not disable advisory blocking in production; upgrade or replace affected
 packages instead.
+
+### Redis troubleshooting
+
+If `php artisan db:seed` reports `Class "Redis" not found`, the application is
+still configured to use the `phpredis` extension or the Predis dependency has
+not been installed. From the project directory, run:
+
+```powershell
+composer install
+php artisan config:clear
+```
+
+Then verify that `.env` contains `REDIS_CLIENT=predis` and retry:
+
+```powershell
+php artisan db:seed
+```
+
+Redis must be running and reachable at `REDIS_HOST` and `REDIS_PORT`. On a
+local Windows installation, start the Redis service before running the seeder
+or queue worker.
 
 ### Migrate and seed
 
